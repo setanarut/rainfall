@@ -8,7 +8,7 @@ Go implementation of a particle-based hydraulic erosion simulation algorithm. Th
 
 Below is a render of a 512x512 grid of fractal noise which was run through the program with the default parameters. This simulation was allowed to run for 2 million iterations.
 
-![erosion_render_0 3f_big](https://user-images.githubusercontent.com/10524511/139001604-97ba0026-a51f-4287-a97f-a799ddcdb8ab.png)
+![preview](https://github.com/setanarut/rainfall/assets/36481442/62da2715-ad6e-4fae-a4e1-c56dc717d524)
 
 Because flow of the simulated raindrops across the terrain emulates real-life physics, geographical features which are present in real terrain manifest in the simulation as well. Features such as gullies on the sides of mountains, sediment-filled valleys, and alluvial fans - where water drains from a narrow passage into a wider area - all appear. 
 
@@ -42,13 +42,13 @@ Deposition rate is a multiplier which controls how much sediment is deposited to
 
 Here is an example of the difference between an output with this value set to 0.3f (default), vs 0.1f, with no other changes.
 
-![dep_comparison](https://user-images.githubusercontent.com/10524511/139002315-5c8c647f-3ff5-4f12-bbcc-2f9374afe5f7.png)
+![deposition](https://github.com/setanarut/rainfall/assets/36481442/c7769bfe-4340-48d8-a566-486117fcc19e)
 
 ### Screenshots
 
 Here's a before and after shot of a render of the unprocessed fractal noise vs the same noise which was run through Rainfall:
 
-![erosion_comparison](https://user-images.githubusercontent.com/10524511/139002320-41b00560-6958-4f69-a5ee-ff8ffab1a139.png)
+![comparison](https://github.com/setanarut/rainfall/assets/36481442/e698e264-2fbc-4c71-b0a2-7a4481799e52)
 
 ### Example code
 
