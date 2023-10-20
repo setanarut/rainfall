@@ -1,123 +1,186 @@
 package rainfall
 
 import (
+	"image"
 	"math"
 	"math/rand"
 )
 
-var rootTwo = math.Sqrt(2)
-var v015 = Vec3{0.15, 0.15, 0.15}
-var v01 = Vec3{0.1, 0.1, 0.1}
+var root2 = math.Sqrt(2)
+var v015 = vec3{0.15, 0.15, 0.15}
+var v01 = vec3{0.1, 0.1, 0.1}
 
-type Rainfall struct {
-	dem             [][]float64
-	sizeX, sizeY    int
-	scale, density  float64
-	friction        float64
-	evaporationRate float64
-	depositionRate  float64
-	rand            *rand.Rand
+type Options struct {
+	Scale              float64
+	Density            float64
+	Friction           float64
+	DepositionRate     float64
+	EvaporationRate    float64 // 1/terrainSizeX
+	RaindropRandomSeed int64
 }
 
-func NewRainfall(dem [][]float64, randomSeed int64) *Rainfall {
-	sizeX := len(dem[0])
-	sizeY := len(dem)
-	evaporRate := 1.0 / float64(sizeX)
-
-	return &Rainfall{
-		dem:             dem,
-		sizeX:           sizeX,
-		sizeY:           sizeY,
-		scale:           100.0,
-		density:         1.0,
-		friction:        0.1,
-		evaporationRate: evaporRate,
-		depositionRate:  0.3,
-		rand:            rand.New(rand.NewSource(randomSeed)),
+// DefaultOptions returns default simulation options
+func DefaultOptions() Options {
+	return Options{
+		Scale:          100.0,
+		Density:        1.0,
+		Friction:       0.1,
+		DepositionRate: 0.3,
+		// 1.0 / height-map width
+		EvaporationRate:    1.0 / 512,
+		RaindropRandomSeed: 1923,
 	}
 }
 
-func (r *Rainfall) GetDem() [][]float64 {
-	return r.dem
+type Rainfall struct {
+	// Terrain is a 2D array height map in range -1.0~1.0
+	Terrain [][]float64
+	Opt     *Options
+
+	// size of terrain (width and height)
+	terrainSizeX, terrainSizeY int
+	rand                       *rand.Rand
 }
 
-func (r *Rainfall) getSurfaceNormal(x, y int) Vec3 {
+// New returns new Rainfall from 2D slice in range [-1 ~ 1]
+func New(terrain [][]float64, opt *Options) *Rainfall {
+	// opt.EvaporationRate = 1.0 / float64(len(terrain[0]))
+	return &Rainfall{
+		Terrain:      terrain,
+		Opt:          opt,
+		terrainSizeX: len(terrain[0]),
+		terrainSizeY: len(terrain),
+		rand:         rand.New(rand.NewSource(opt.RaindropRandomSeed)),
+	}
+}
 
+// NewFromImageFile returns new Rainfall from image file
+func NewFromImageFile(filePath string, opt *Options) *Rainfall {
+	return NewFromImage(openImage(filePath), opt)
+
+}
+
+func NewFromImage(img image.Image, opt *Options) *Rainfall {
+	// opt.EvaporationRate = 1.0 / float64(len(terrain[0]))
+	return &Rainfall{
+		Terrain:      imageToSlice(img),
+		Opt:          opt,
+		terrainSizeX: img.Bounds().Size().X,
+		terrainSizeY: img.Bounds().Size().Y,
+		rand:         rand.New(rand.NewSource(opt.RaindropRandomSeed)),
+	}
+}
+
+func (rf *Rainfall) getSurfaceNormal(x, y int) vec3 {
 	// create the vector and add the 4 points directly adjacent to it
-	surfaceNormal := v015
-	surfaceNormal.Mul(Vec3{r.scale * (r.dem[y][x] - r.dem[y][x+1]), 1, 0})
+	surfNorm := v015 // Surface normal
+	surfNorm.Mul(vec3{
+		rf.Opt.Scale * (rf.Terrain[y][x] - rf.Terrain[y][x+1]),
+		1,
+		0})
+	surfNorm.Add(v015.MulR(vec3{
+		rf.Opt.Scale * (rf.Terrain[y][x-1] - rf.Terrain[y][x]),
+		1,
+		0}))
 
-	// 1 x-1
-	surfaceNormal.Add(v015.MulR(Vec3{r.scale * (r.dem[y][x-1] - r.dem[y][x]), 1, 0}))
-	// 2 y+1
-	surfaceNormal.Add(v015.MulR(Vec3{0, 1, r.scale * (r.dem[y][x] - r.dem[y+1][x])}))
-	// 3 y-1
-	surfaceNormal.Add(v015.MulR(Vec3{0, 1, r.scale * (r.dem[y-1][x] - r.dem[y][x])}))
+	surfNorm.Add(v015.MulR(vec3{
+		0,
+		1,
+		rf.Opt.Scale * (rf.Terrain[y][x] - rf.Terrain[y+1][x])}))
+
+	surfNorm.Add(v015.MulR(vec3{
+		0,
+		1,
+		rf.Opt.Scale * (rf.Terrain[y-1][x] - rf.Terrain[y][x])}))
 
 	// and the 4 diagonal adjacent
-	surfaceNormal.Add(v01.MulR(Vec3{r.scale * (r.dem[y][x] - r.dem[y+1][x+1]) / rootTwo, rootTwo, r.scale * (r.dem[y][x] - r.dem[y+1][x+1]) / rootTwo}))
-	surfaceNormal.Add(v01.MulR(Vec3{r.scale * (r.dem[y][x] - r.dem[y-1][x+1]) / rootTwo, rootTwo, r.scale * (r.dem[y][x] - r.dem[y-1][x+1]) / rootTwo}))
-	surfaceNormal.Add(v01.MulR(Vec3{r.scale * (r.dem[y][x] - r.dem[y+1][x-1]) / rootTwo, rootTwo, r.scale * (r.dem[y][x] - r.dem[y+1][x-1]) / rootTwo}))
-	surfaceNormal.Add(v01.MulR(Vec3{r.scale * (r.dem[y][x] - r.dem[y-1][x-1]) / rootTwo, rootTwo, r.scale * (r.dem[y][x] - r.dem[y-1][x-1]) / rootTwo}))
+	surfNorm.Add(v01.MulR(vec3{
+		rf.Opt.Scale * (rf.Terrain[y][x] - rf.Terrain[y+1][x+1]) / root2,
+		root2,
+		rf.Opt.Scale * (rf.Terrain[y][x] - rf.Terrain[y+1][x+1]) / root2}))
 
-	surfaceNormal.Normalize()
+	surfNorm.Add(v01.MulR(vec3{
+		rf.Opt.Scale * (rf.Terrain[y][x] - rf.Terrain[y-1][x+1]) / root2,
+		root2,
+		rf.Opt.Scale * (rf.Terrain[y][x] - rf.Terrain[y-1][x+1]) / root2}))
 
-	return surfaceNormal
+	surfNorm.Add(v01.MulR(vec3{
+		rf.Opt.Scale * (rf.Terrain[y][x] - rf.Terrain[y+1][x-1]) / root2,
+		root2,
+		rf.Opt.Scale * (rf.Terrain[y][x] - rf.Terrain[y+1][x-1]) / root2}))
+
+	surfNorm.Add(v01.MulR(vec3{
+		rf.Opt.Scale * (rf.Terrain[y][x] - rf.Terrain[y-1][x-1]) / root2,
+		root2,
+		rf.Opt.Scale * (rf.Terrain[y][x] - rf.Terrain[y-1][x-1]) / root2}))
+
+	// normalize
+	surfNorm.Normalize()
+
+	return surfNorm
 }
 
-func (r *Rainfall) randRangeInt(min, max int) int {
-	return r.rand.Intn(max-min+1) + min
+func (rf *Rainfall) randRangeInt(min, max int) int {
+	return rf.rand.Intn(max-min+1) + min
 
 }
 
-// func (r *Rainfall) randRangeFloat(min, max float64) float64 {
-// 	return min + r.rand.Float64()*(max-min)
-// }
+// Raindrop drops a random single raindrop
+func (rf *Rainfall) Raindrop() {
+	// initialize the random raindrop location
+	loc := vec2{
+		X: float64(rf.randRangeInt(1, rf.terrainSizeX-2)),
+		Y: float64(rf.randRangeInt(1, rf.terrainSizeY-2))}
 
-func (r *Rainfall) raindrop() {
-	// initialize the raindrop
-	loc := Vec2{
-		X: float64(r.randRangeInt(1, r.sizeX-2)),
-		Y: float64(r.randRangeInt(1, r.sizeY-2))}
-
-	speed := Vec2{0, 0}
+	speed := vec2{0, 0}
 	volume := 1.0
 	percentSediment := 0.0
 
 	// loop while the raindrop still exists
 	for volume > 0 {
-		initPos := Vec2{X: loc.X, Y: loc.Y}
-		positionNormal := r.getSurfaceNormal(int(initPos.X), int(initPos.Y))
+		initPos := vec2{X: loc.X, Y: loc.Y}
+		positionNormal := rf.getSurfaceNormal(int(initPos.X), int(initPos.Y))
 		// accelerate the raindrop using acceleration = force / mass
-		acc := Vec2{X: positionNormal.X, Y: positionNormal.Z}
-		acc.DivS(volume * r.density)
+		acc := vec2{X: positionNormal.X, Y: positionNormal.Z}
+		acc.DivS(volume * rf.Opt.Density)
 		speed.Add(acc)
 		// update the position based on the new speed
 		loc.Add(speed)
 		// reduce the speed due to friction after the movement
-		speed.MulS(1.0 - r.friction)
+		speed.MulS(1.0 - rf.Opt.Friction)
 
 		// check to see if the raindrop went out of bounds
-		if loc.X >= float64(r.sizeX-1) || loc.X < 1 || loc.Y >= float64(r.sizeY-1) || loc.Y < 1 {
+		if loc.X >= float64(rf.terrainSizeX-1) || loc.X < 1 || loc.Y >= float64(rf.terrainSizeY-1) || loc.Y < 1 {
 			break
 		}
 		// compute the value of the maximum sediment and the difference between it and the percent sediment in the raindrop
 		// positive numbers will cause erosion, negative numbers will cause deposition
-		maxSediment := volume * speed.Length() * (r.dem[int(initPos.Y)][int(initPos.X)] - r.dem[int(loc.Y)][int(loc.X)])
+		maxSediment := volume * speed.Length() * (rf.Terrain[int(initPos.Y)][int(initPos.X)] - rf.Terrain[int(loc.Y)][int(loc.X)])
 		if maxSediment < 0.0 {
 			maxSediment = 0.0
 		}
 		sedimentDifference := maxSediment - percentSediment
 		// erode or deposit to the dem
-		percentSediment += r.depositionRate * sedimentDifference
-		r.dem[int(initPos.Y)][int(initPos.X)] -= volume * r.depositionRate * sedimentDifference
+		percentSediment += rf.Opt.DepositionRate * sedimentDifference
+		rf.Terrain[int(initPos.Y)][int(initPos.X)] -= volume * rf.Opt.DepositionRate * sedimentDifference
 		// evaporate the raindrop
-		volume -= r.evaporationRate
+		volume -= rf.Opt.EvaporationRate
 	}
 }
 
-func (r *Rainfall) Simulate(iterations int) {
-	for i := 0; i < iterations; i++ {
-		r.raindrop()
+// Raindrops drops the given amount of random raindrops.
+func (rf *Rainfall) Raindrops(amount int) {
+	for i := 0; i < amount; i++ {
+		rf.Raindrop()
 	}
+}
+
+// WriteToImageFile writes terrain to file
+func (rf *Rainfall) WriteToImageFile(filePath string) {
+	saveImage(filePath, sliceToImage(rf.Terrain))
+}
+
+// GetImage  Returns Terrain as image
+func (rf *Rainfall) GetImage() *image.Gray {
+	return sliceToImage(rf.Terrain)
 }

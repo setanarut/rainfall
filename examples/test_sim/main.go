@@ -3,13 +3,19 @@ package main
 import "github.com/setanarut/rainfall"
 
 func main() {
-	dem := rainfall.ImageToSlice(rainfall.LoadImage("noise.png"))
-	rf := rainfall.NewRainfall(dem, int64(666555))
-
-	for i := 0; i < 200; i++ {
-		rf.Simulate(1000)
-
+	opts := &rainfall.Options{
+		Scale:              100.0,
+		Density:            1.0,
+		Friction:           0.1,
+		DepositionRate:     0.3,
+		EvaporationRate:    1.0 / 512, // (1/width)
+		RaindropRandomSeed: 1923,
 	}
-	dem = rf.GetDem()
-	rainfall.SaveImage("noise_out.png", rainfall.SliceToImage(dem))
+
+	sim := rainfall.NewFromImageFile("noise.png", opts)
+
+	// Raindrops drops the given amount of random raindrops.
+	sim.Raindrops(200000)
+
+	sim.WriteToImageFile("noise_out.png")
 }

@@ -9,12 +9,12 @@ import (
 	"os"
 )
 
-// MapRange map range to another range
-func MapRange(v, v1, v2, min, max float64) float64 {
+// mapRange map range to another range
+func mapRange(v, v1, v2, min, max float64) float64 {
 	return min + ((max-min)/(v2-v1))*(v-v1)
 }
 
-func ImageToSlice(img image.Image) [][]float64 {
+func imageToSlice(img image.Image) [][]float64 {
 	// Convert image.Image to image.Gray
 	grayImg := image.NewGray(img.Bounds())
 	draw.Draw(grayImg, grayImg.Bounds(), img, image.Point{}, draw.Src)
@@ -25,27 +25,27 @@ func ImageToSlice(img image.Image) [][]float64 {
 		floatSlice[y] = make([]float64, width)
 		for x := 0; x < width; x++ {
 			v := float64(grayImg.GrayAt(x, y).Y)
-			v32 := MapRange(v, 0, 255, -1, 1)
+			v32 := mapRange(v, 0, 255, -1, 1)
 			floatSlice[y][x] = float64(v32)
 		}
 	}
 	return floatSlice
 }
-func SliceToImage(dem [][]float64) *image.Gray {
+func sliceToImage(dem [][]float64) *image.Gray {
 	width := len(dem[0])
 	height := len(dem)
 	grayImg := image.NewGray(image.Rect(0, 0, width, height))
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			v := float64(dem[y][x])
-			grayValue := color.Gray{uint8(MapRange(v, -1, 1, 0, 255))}
+			grayValue := color.Gray{uint8(mapRange(v, -1, 1, 0, 255))}
 			grayImg.SetGray(x, y, grayValue)
 		}
 	}
 	return grayImg
 }
 
-func LoadImage(filename string) image.Image {
+func openImage(filename string) image.Image {
 	f, err := os.Open(filename)
 	if err != nil {
 		log.Fatalf("os.Open failed: %v", err)
@@ -58,8 +58,7 @@ func LoadImage(filename string) image.Image {
 	return img
 }
 
-// SaveImage
-func SaveImage(filename string, img image.Image) {
+func saveImage(filename string, img image.Image) {
 	f, err := os.Create(filename)
 	if err != nil {
 		log.Fatalf("os.Create failed: %v", err)
