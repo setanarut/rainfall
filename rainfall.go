@@ -6,16 +6,23 @@ import (
 	"math/rand"
 )
 
+// constants
 var root2 = math.Sqrt(2)
 var v015 = vec3{0.15, 0.15, 0.15}
 var v01 = vec3{0.1, 0.1, 0.1}
 
 type Options struct {
-	Scale              float64
-	Density            float64
-	Friction           float64
-	DepositionRate     float64
-	EvaporationRate    float64 // 1/terrainSizeX
+	// Scale is used as a multiplier for determining the surface normal at any given point. Increasing this value would cause a raindrop to move a farther distance, whereas decreasing it would cause it to move a shorter distance. This is because the scale directly affects the speed of the raindrop. Acceleration = force / mass, and this variable determines the force in that equation.
+	Scale float64
+	// Density is used to calculate the acceleration of the raindrop as it flows across the heightmap. Acceleration = force / mass, and mass is calculated by volume * density. Therefore, increasing the density causes the raindrop to accelerate more slowly.
+	Density float64
+	// Friction is a multiplier which effects the speed of the raindrop after it moves across a surface. Higher friction means lower speeds.
+	Friction float64
+	// Evaporation rate is how many times the raindrop can move to a new position before it is terminated. By default, this number is set to the 1 / the length of the X axis.
+	DepositionRate float64
+	// Deposition rate is a multiplier which controls how much sediment is deposited to the terrain.
+	EvaporationRate float64
+	// The seed of randomness in each raindrop.
 	RaindropRandomSeed int64
 }
 
@@ -44,7 +51,6 @@ type Rainfall struct {
 
 // New returns new Rainfall from 2D slice in range [-1 ~ 1]
 func New(terrain [][]float64, opt *Options) *Rainfall {
-	// opt.EvaporationRate = 1.0 / float64(len(terrain[0]))
 	return &Rainfall{
 		Terrain:       terrain,
 		Opt:           opt,
@@ -60,8 +66,8 @@ func NewFromImageFile(filePath string, opt *Options) *Rainfall {
 
 }
 
+// NewFromImage returns new Rainfall from image.Image
 func NewFromImage(img image.Image, opt *Options) *Rainfall {
-	// opt.EvaporationRate = 1.0 / terrainWidth
 	return &Rainfall{
 		Terrain:       imageToSlice(img),
 		Opt:           opt,
@@ -132,7 +138,7 @@ func (rf *Rainfall) Raindrop() {
 		X: float64(rf.randRangeInt(1, rf.terrainWidth-2)),
 		Y: float64(rf.randRangeInt(1, rf.terrainHeight-2))}
 
-	speed := vec2{0, 0}
+	speed := vec2{X: 0, Y: 0}
 	volume := 1.0
 	percentSediment := 0.0
 
@@ -175,12 +181,12 @@ func (rf *Rainfall) Raindrops(amount int) {
 	}
 }
 
-// WriteToImageFile writes terrain to file
+// WriteToImageFile writes terrain to image file
 func (rf *Rainfall) WriteToImageFile(filePath string) {
 	saveImage(filePath, sliceToImage(rf.Terrain))
 }
 
-// GetImage  Returns Terrain as image
+// GetImage returns terrain as image
 func (rf *Rainfall) GetImage() *image.Gray {
 	return sliceToImage(rf.Terrain)
 }

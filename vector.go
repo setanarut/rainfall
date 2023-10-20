@@ -71,12 +71,12 @@ func (v *vec3) MulS(scalar float64) {
 	v.Z *= scalar
 }
 
-// MulR returns new multiple Vec3
+// MulR multiplies by other vector and returns a new one
 func (v vec3) MulR(other vec3) vec3 {
 	return vec3{v.X * other.X, v.Y * other.Y, v.Z * other.Z}
 }
 
-// AddR returns new added Vec3
+// AddR adds with other and returns the new one
 func (v vec3) AddR(other vec3) vec3 {
 	return vec3{v.X + other.X, v.Y + other.Y, v.Z + other.Z}
 }
