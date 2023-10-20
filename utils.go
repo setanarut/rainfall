@@ -9,35 +9,49 @@ import (
 	"os"
 )
 
+func make2DMatrix(width, height int) [][]float64 {
+	mat := make([][]float64, width) // width
+	for x := range mat {
+		mat[x] = make([]float64, height)
+	}
+	return mat
+
+}
+
 // mapRange map range to another range
 func mapRange(v, v1, v2, min, max float64) float64 {
 	return min + ((max-min)/(v2-v1))*(v-v1)
 }
 
 func imageToSlice(img image.Image) [][]float64 {
+
 	// Convert image.Image to image.Gray
 	grayImg := image.NewGray(img.Bounds())
 	draw.Draw(grayImg, grayImg.Bounds(), img, image.Point{}, draw.Src)
+
 	width := grayImg.Bounds().Size().X
 	height := grayImg.Bounds().Size().Y
-	floatSlice := make([][]float64, height)
-	for y := 0; y < height; y++ {
-		floatSlice[y] = make([]float64, width)
-		for x := 0; x < width; x++ {
-			v := float64(grayImg.GrayAt(x, y).Y)
-			v32 := mapRange(v, 0, 255, -1, 1)
-			floatSlice[y][x] = float64(v32)
+
+	matrix := make2DMatrix(width, height)
+
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			grayValue := float64(grayImg.GrayAt(x, y).Y)
+			matrix[x][y] = mapRange(grayValue, 0, 255, -1, 1)
+
 		}
 	}
-	return floatSlice
+	return matrix
 }
-func sliceToImage(dem [][]float64) *image.Gray {
-	width := len(dem[0])
-	height := len(dem)
+
+func sliceToImage(m [][]float64) *image.Gray {
+	width := len(m)
+	height := len(m[0])
 	grayImg := image.NewGray(image.Rect(0, 0, width, height))
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			v := float64(dem[y][x])
+
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			v := m[x][y]
 			grayValue := color.Gray{uint8(mapRange(v, -1, 1, 0, 255))}
 			grayImg.SetGray(x, y, grayValue)
 		}
