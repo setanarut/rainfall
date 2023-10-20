@@ -20,8 +20,8 @@ type Options struct {
 }
 
 // DefaultOptions returns default simulation options
-func DefaultOptions() Options {
-	return Options{
+func DefaultOptions() *Options {
+	return &Options{
 		Scale:          100.0,
 		Density:        1.0,
 		Friction:       0.1,
