@@ -1,5 +1,7 @@
 # Rainfall
 
+Go language implementation of https://github.com/Vehxx/Rainfall Java repository
+
 ### Overview
 
 Go implementation of a particle-based hydraulic erosion simulation algorithm. The program accepts a heightmap in the form of a 2D slice`[x][y]float64` in range **[-1, 1]** or `image.Image` and returns a 2D slice or `image.Image`.
