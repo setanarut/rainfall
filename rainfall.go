@@ -18,9 +18,9 @@ type Options struct {
 	Density float64
 	// Friction is a multiplier which effects the speed of the raindrop after it moves across a surface. Higher friction means lower speeds.
 	Friction float64
-	// Evaporation rate is how many times the raindrop can move to a new position before it is terminated. By default, this number is set to the 1 / the length of the X axis.
-	DepositionRate float64
 	// Deposition rate is a multiplier which controls how much sediment is deposited to the terrain.
+	DepositionRate float64
+	// Evaporation rate is how many times the raindrop can move to a new position before it is terminated. By default, this number is set to the 1 / the length of the X axis.
 	EvaporationRate float64
 	// The seed of randomness in each raindrop.
 	RaindropRandomSeed int64
