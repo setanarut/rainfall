@@ -1,6 +1,6 @@
 # Rainfall
 
-Go language implementation of https://github.com/Vehxx/Rainfall Java repository
+Go language port of https://github.com/Vehxx/Rainfall Java repository
 
 ### Overview
 
