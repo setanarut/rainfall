@@ -161,10 +161,7 @@ func (rf *Rainfall) Raindrop() {
 		}
 		// compute the value of the maximum sediment and the difference between it and the percent sediment in the raindrop
 		// positive numbers will cause erosion, negative numbers will cause deposition
-		maxSediment := volume * speed.Length() * (rf.Terrain[int(initPos.X)][int(initPos.Y)] - rf.Terrain[int(loc.X)][int(loc.Y)])
-		if maxSediment < 0.0 {
-			maxSediment = 0.0
-		}
+		maxSediment := max(volume*speed.Length()*(rf.Terrain[int(initPos.X)][int(initPos.Y)]-rf.Terrain[int(loc.X)][int(loc.Y)]), 0.0)
 		sedimentDifference := maxSediment - percentSediment
 		// erode or deposit to the dem
 		percentSediment += rf.Opt.DepositionRate * sedimentDifference
@@ -177,7 +174,7 @@ func (rf *Rainfall) Raindrop() {
 // Raindrops drops the given amount of random raindrops.
 func (rf *Rainfall) Raindrops(amount int) {
 	for i := 0; i < amount; i++ {
-		rf.Raindrop()
+		go rf.Raindrop()
 	}
 }
 
